@@ -44,6 +44,12 @@ class Fluent::MysqlReplicatorElasticsearchOutput < Fluent::BufferedOutput
 
     chunk.msgpack_each do |tag, time, record|
       tag_parts = tag.match(@tag_format)
+
+      if tag_parts.nil?
+        puts "cannot parse tag: #{tag}"
+        next
+      end
+
       target_index = tag_parts['index_name']
       target_type = tag_parts['type_name']
       id_key = tag_parts['primary_key']

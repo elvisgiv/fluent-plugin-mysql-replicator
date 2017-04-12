@@ -10,6 +10,9 @@ module Fluent
     def initialize
       require 'mysql2'
       require 'digest/sha1'
+#my/
+      require 'date'
+#/my
       super
     end
 
@@ -74,14 +77,36 @@ module Fluent
         rows.each do |row|
           current_ids << row[@primary_key]
           current_hash = Digest::SHA1.hexdigest(row.flatten.join)
-          row.each {|k, v| row[k] = v.to_s if v.is_a?(Time) || v.is_a?(Date) || v.is_a?(BigDecimal)}
+          #row.each {|k, v| row[k] = v.to_s if v.is_a?(Time) || v.is_a?(Date) || v.is_a?(BigDecimal)}
+#my
+          row.each do |k, v|
+            if v.is_a?(BigDecimal)
+              row[k] = v.to_s
+            elsif v.is_a?(Time) || v.is_a?(Date)
+              datetime = Time.parse(v.to_s)
+              row[k] = datetime.strftime("%Y-%m-%dT%H:%M:%SZ") if datetime
+            end
+          end
+#my
           row.select {|k, v| v.to_s.strip.match(/^SELECT/i) }.each do |k, v|
             row[k] = [] unless row[k].is_a?(Array)
             nest_rows, prepared_con = query(v.gsub(/\$\{([^\}]+)\}/, row[$1].to_s), prepared_con)
             nest_rows.each do |nest_row|
-              nest_row.each {|k, v| nest_row[k] = v.to_s if v.is_a?(Time) || v.is_a?(Date) || v.is_a?(BigDecimal)}
+              #nest_row.each {|k, v| nest_row[k] = v.to_s if v.is_a?(Time) || v.is_a?(Date) || v.is_a?(BigDecimal)}
+              #row[k] << nest_row
+#my/
+              nest_row.each do |k, v|
+                if v.is_a?(BigDecimal)
+                  nest_row[k] = v.to_s
+                elsif v.is_a?(Time) || v.is_a?(Date)
+                  datetime = Time.parse(v.to_s)
+                  nest_row[k] = datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+                end
+              end
               row[k] << nest_row
+#/my
             end
+
             prepared_con.close
           end
           if row[@primary_key].nil?

@@ -88,12 +88,35 @@ module Fluent
           end
           db = get_origin_connection(config)
           db.query(config['query']).each do |row|
-            row.each {|k, v| row[k] = v.to_s if v.is_a?(Time) || v.is_a?(Date) || v.is_a?(BigDecimal)}
+            #row.each {|k, v| row[k] = v.to_s if v.is_a?(Time) || v.is_a?(Date) || v.is_a?(BigDecimal)}
+#my
+            row.each do |k, v|
+              if v.is_a?(BigDecimal)
+                row[k] = v.to_s
+              elsif v.is_a?(Time) || v.is_a?(Date)
+                datetime = Time.parse(v.to_s)
+                row[k] = datetime.strftime("%Y-%m-%dT%H:%M:%SZ") if datetime
+              end
+            end
+#my
+
             row.select {|k, v| v.to_s.strip.match(/^SELECT[^\$]+\$\{[^\}]+\}/i) }.each do |k, v|
               row[k] = [] unless row[k].is_a?(Array)
               nest_db.query(v.gsub(/\$\{([^\}]+)\}/) {|matched| row[$1].to_s}).each do |nest_row|
-                nest_row.each {|k, v| nest_row[k] = v.to_s if v.is_a?(Time) || v.is_a?(Date) || v.is_a?(BigDecimal)}
+                #nest_row.each {|k, v| nest_row[k] = v.to_s if v.is_a?(Time) || v.is_a?(Date) || v.is_a?(BigDecimal)}
+                #row[k] << nest_row
+#my/
+                nest_row.each do |k, v|
+                  if v.is_a?(BigDecimal)
+                    nest_row[k] = v.to_s
+                  elsif v.is_a?(Time) || v.is_a?(Date)
+                    datetime = Time.parse(v.to_s)
+                    nest_row[k] = datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+                  end
+                end
                 row[k] << nest_row
+#/my
+
               end
             end
             current_id = row[primary_key]
