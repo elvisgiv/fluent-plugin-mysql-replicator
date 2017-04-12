@@ -111,7 +111,7 @@ module Fluent
                     nest_row[k] = v.to_s
                   elsif v.is_a?(Time) || v.is_a?(Date)
                     datetime = Time.parse(v.to_s)
-                    nest_row[k] = datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+                    nest_row[k] = datetime.strftime("%Y-%m-%dT%H:%M:%SZ") if datetime
                   end
                 end
                 row[k] << nest_row
